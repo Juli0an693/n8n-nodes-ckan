@@ -59,6 +59,13 @@ const ops: Record<string, Operation> = {
 		method: 'GET',
 		skipHealthCheck: true,
 	},
+	package_list: {
+		method: 'GET',
+		params: {
+			limit: { type: 'number', default: 1000 },
+			offset: { type: 'number', default: 0 },
+		},
+	}
 };
 
 const toTitle = (s: string) =>
