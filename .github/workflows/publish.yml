@@ -29,6 +29,6 @@ jobs:
           NODE_OPTIONS: '--experimental-require-module'
 
       - name: Publish to npm
-        run: npm publish
+        run: npm publish --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
