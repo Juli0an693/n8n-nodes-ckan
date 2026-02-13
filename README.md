@@ -20,12 +20,13 @@ Read access to CKAN, CKAN API functions.
 This is a list of the features this node offers. All features require **no** API key or credentials.
 See the [CKAN API docs](https://docs.ckan.org/en/latest/api/) for reference.
 
+- **Status Show** - Check CKAN instance status
+- **Package List** - Return a list of the names of the site’s datasets (packages)
 - **Package Search** - Search datasets with filters, facets, and sorting
 - **Package Show** - Get details of a specific dataset by ID
 - **Resource Show** - Get details of a specific resource by ID
 - **Datastore Search** - Query data from a DataStore resource
 - **Organization Show** - Get details of an organization
-- **Status Show** - Check CKAN instance status
 
 ## Usage
 1. Just enter the CKAN URL
