@@ -24,3 +24,7 @@ npm-debug.log*
 
 # Coverage
 coverage/
+
+# Node Version Manager
+.nvmrc
+.node-version

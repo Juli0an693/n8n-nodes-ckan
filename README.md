@@ -37,3 +37,8 @@ No credentials required for public CKAN APIs. Simply provide the CKAN instance U
 ## License
 
 [MIT](LICENSE)
+
+
+## Author
+
+(C) 2025, Ondics GmbH, https://ondics.de/
