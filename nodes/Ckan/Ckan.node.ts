@@ -32,7 +32,7 @@ export class Ckan implements INodeType {
 				validateType: 'url',
 				required: true,
 				default: '',
-				placeholder: 'https://ckan.example.com',
+				placeholder: 'https://demo.ckan.org',
 			},
 			...ckanNodeProperties,
 		],
