@@ -3,11 +3,15 @@ import {
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
+	JsonObject,
+	NodeApiError,
 	NodeConnectionTypes,
 	NodeOperationError,
 } from 'n8n-workflow';
-import { ckanNodeProperties } from './CkanProperties';
-import { buildRequest, healthCheck, ckanApiRequest, normalizeUrl } from './actions';
+import { buildRequest, buildNodeProperties, operationOptions } from './actions/operations';
+import { ckanApiRequest, healthCheck } from './actions/transport';
+
+const trimUrl = (url: string) => url.replace(/\/+$/, '');
 
 export class Ckan implements INodeType {
 	description: INodeTypeDescription = {
@@ -19,7 +23,12 @@ export class Ckan implements INodeType {
 		subtitle: '={{$parameter["operation"]}}',
 		description: 'Interact with the CKAN API',
 		defaults: { name: 'CKAN' },
-		credentials: [],
+		credentials: [
+			{
+				name: 'ckanApi',
+				required: false,
+			},
+		],
 		usableAsTool: true,
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
@@ -34,7 +43,15 @@ export class Ckan implements INodeType {
 				default: '',
 				placeholder: 'https://demo.ckan.org',
 			},
-			...ckanNodeProperties,
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				options: operationOptions,
+				default: 'package_search',
+			},
+			...buildNodeProperties(),
 		],
 	};
 
@@ -42,31 +59,38 @@ export class Ckan implements INodeType {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 
+		const operation = this.getNodeParameter('operation', 0) as string;
+		const ckanUrl = trimUrl(this.getNodeParameter('ckanUrl', 0) as string);
+
+		await healthCheck(this, operation, ckanUrl);
+
+		// Fetch credentials once — only needed for POST operations
+		const creds = await this.getCredentials('ckanApi').catch(() => null);
+		const authToken = creds?.apiToken as string | undefined;
+		const authHeaderName = (creds?.authorizationHeaderName as string) || 'Authorization';
+
 		for (let i = 0; i < items.length; i++) {
 			try {
-				const operation = this.getNodeParameter('operation', i) as string;
-				const ckanUrl = this.getNodeParameter('ckanUrl', i) as string;
-				const normalizedCkanUrl = normalizeUrl(ckanUrl);
+				const req = buildRequest(this, operation, i);
 
-				await healthCheck(this, operation, normalizedCkanUrl);
-
-				const getParam = (name: string) => this.getNodeParameter(name, i, '');
-				const req = buildRequest(this, operation, getParam);
-
-				const response = await ckanApiRequest.call(
+				const response = await ckanApiRequest(
 					this,
 					req.method,
-					req.endpoint,
+					operation,
 					req.body,
 					req.qs,
-					normalizedCkanUrl,
+					trimUrl(this.getNodeParameter('ckanUrl', i) as string),
+					req.method === 'POST' ? authToken : undefined,
+					authHeaderName,
 				);
+
 				if (!response?.success) {
 					throw new NodeOperationError(
 						this.getNode(),
 						response?.error?.message ?? 'CKAN request failed',
 					);
 				}
+
 				returnData.push({
 					json: { success: true, data: response.result as object },
 					pairedItem: { item: i },
@@ -76,7 +100,7 @@ export class Ckan implements INodeType {
 					returnData.push({ json: { error: (error as Error).message }, pairedItem: { item: i } });
 					continue;
 				}
-				throw error;
+				throw new NodeApiError(this.getNode(), error as JsonObject);
 			}
 		}
 
