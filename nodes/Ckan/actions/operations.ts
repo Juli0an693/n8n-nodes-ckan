@@ -1,13 +1,11 @@
-import type { IExecuteFunctions, INodeProperties } from 'n8n-workflow';
-
-type Param = {
+export type Param = {
 	type: 'string' | 'number' | 'boolean' | 'json';
 	description?: string;
 	default?: string | number | boolean;
 	required?: boolean;
 };
 
-type Operation = {
+export type Operation = {
 	method: 'GET' | 'POST';
 	description?: string;
 	params?: Record<string, Param>;
@@ -15,6 +13,8 @@ type Operation = {
 };
 
 const ops: Record<string, Operation> = {
+	// ─── Read: Packages ────────────────────────────────────────────────────────────
+
 	package_search: {
 		method: 'GET',
 		description:
@@ -118,6 +118,8 @@ const ops: Record<string, Operation> = {
 		},
 	},
 
+	// ─── Read: Resources ───────────────────────────────────────────────────────────
+
 	resource_show: {
 		method: 'GET',
 		description: 'Return the metadata of a single resource (file or link) attached to a dataset.',
@@ -154,6 +156,8 @@ const ops: Record<string, Operation> = {
 		},
 	},
 
+	// ─── Read: DataStore ───────────────────────────────────────────────────────────
+
 	datastore_search: {
 		method: 'GET',
 		description:
@@ -185,6 +189,8 @@ const ops: Record<string, Operation> = {
 			},
 		},
 	},
+
+	// ─── Read: Organisations ───────────────────────────────────────────────────────
 
 	organization_list: {
 		method: 'GET',
@@ -228,7 +234,7 @@ const ops: Record<string, Operation> = {
 		},
 	},
 
-	// ─── Read: Groups ─────────────────────────────────────────────────────────────
+	// ─── Read: Groups & Tags ──────────────────────────────────────────────────────
 
 	group_list: {
 		method: 'GET',
@@ -275,12 +281,16 @@ const ops: Record<string, Operation> = {
 		},
 	},
 
+	// ─── Status ────────────────────────────────────────────────────────────────────
+
 	status_show: {
 		method: 'GET',
 		description:
 			'Return basic information about the CKAN site — version, installed extensions and site title. Also used internally as a health check.',
-		skipHealthCheck: true, // must not trigger a health check on itself
+		skipHealthCheck: true,
 	},
+
+	// ─── Write: Packages ───────────────────────────────────────────────────────────
 
 	package_create: {
 		method: 'POST',
@@ -374,6 +384,8 @@ const ops: Record<string, Operation> = {
 		},
 	},
 
+	// ─── Write: Resources ──────────────────────────────────────────────────────────
+
 	resource_create: {
 		method: 'POST',
 		description: 'Add a new resource (an external link or file reference) to an existing dataset.',
@@ -432,6 +444,8 @@ const ops: Record<string, Operation> = {
 		},
 	},
 
+	// ─── Write: DataStore ──────────────────────────────────────────────────────────
+
 	datastore_create: {
 		method: 'POST',
 		description:
@@ -489,72 +503,13 @@ const ops: Record<string, Operation> = {
 				description: 'Set to true to allow writing to an active (non-draft) resource.',
 			},
 		},
-	},
+	}, 
 };
 
-export const shouldSkipHealthCheck = (opName: string) => ops[opName]?.skipHealthCheck === true;
+export function getOperation(key: string): Operation | undefined {
+	return ops[key];
+}
 
-const titleCase = (s: string) =>
-	s
-		.split('_')
-		.map((w) => w[0].toUpperCase() + w.slice(1))
-		.join(' ');
-
-export const operationOptions = Object.keys(ops).map((k) => ({
-	name: titleCase(k),
-	value: k,
-	description: ops[k].description,
-}));
-
-const typeDefaults: Record<Param['type'], string | number | boolean> = {
-	string: '',
-	number: 0,
-	boolean: false,
-	json: '',
-};
-
-const getDefaultValue = (paramType: Param['type'], defaultVal?: string | number | boolean) =>
-	defaultVal !== undefined ? defaultVal : typeDefaults[paramType];
-
-export const buildNodeProperties = (): INodeProperties[] =>
-	Object.entries(ops)
-		.sort(([aName], [bName]) => aName.localeCompare(bName))
-		.flatMap(([opName, op]) =>
-			Object.entries(op.params ?? {})
-				.sort(([aName], [bName]) => aName.localeCompare(bName))
-				.map(([name, param]) => ({
-					displayName: titleCase(name),
-					name,
-					type: param.type,
-					default: getDefaultValue(param.type, param.default),
-					description: param.description,
-					required: param.required,
-					displayOptions: { show: { operation: [opName] } },
-				})),
-		);
-
-export function buildRequest(ctx: IExecuteFunctions, opName: string, itemIndex: number) {
-	const op = ops[opName];
-	if (!op) throw new Error(`Unknown operation: ${opName}`);
-
-	const data = Object.fromEntries(
-		Object.keys(op.params ?? {})
-			.map((name) => {
-				const value = ctx.getNodeParameter(name, itemIndex, '');
-				const paramDef = op.params?.[name];
-				return [name, value, paramDef?.default] as const;
-			})
-			.filter(([, value, defaultVal]) => {
-				if (value === '' || value === null) return false;
-				if (defaultVal !== undefined && value === defaultVal) return false;
-				return true;
-			})
-			.map(([name, value]) => [name, value] as const),
-	);
-
-	return {
-		method: op.method,
-		qs: op.method === 'GET' ? data : {},
-		body: op.method === 'POST' ? data : {},
-	};
+export function getAllOperations(): Array<[string, Operation]> {
+	return Object.entries(ops);
 }

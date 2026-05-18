@@ -1,6 +1,6 @@
-import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+import type { ICredentialTestRequest, ICredentialType, INodeProperties } from 'n8n-workflow';
 
-export class CKAN implements ICredentialType {
+export class Ckan implements ICredentialType {
 	name = 'ckanApi';
 
 	displayName = 'CKAN API';
@@ -9,6 +9,15 @@ export class CKAN implements ICredentialType {
 		'https://docs.ckan.org/en/latest/maintaining/configuration.html#api-token-settings';
 
 	properties: INodeProperties[] = [
+		{
+			displayName: 'CKAN URL',
+			name: 'ckanUrl',
+			type: 'string',
+			default: '',
+			required: true,
+			placeholder: 'https://demo.ckan.org',
+			description: 'Base URL of your CKAN instance.',
+		},
 		{
 			displayName: 'API Token',
 			name: 'apiToken',
@@ -24,9 +33,19 @@ export class CKAN implements ICredentialType {
 			name: 'authorizationHeaderName',
 			type: 'string',
 			default: 'Authorization',
-			required: false,
 			description:
 				'The HTTP header used to send your API token. Defaults to "Authorization". Only change this if your CKAN instance has been configured with a custom apitoken_header_name.',
 		},
 	];
+
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: '={{$credentials.ckanUrl.replace(/\\/+$/, "")}}',
+			url: '/api/3/action/status_show',
+			headers: {
+				'={{$credentials.authorizationHeaderName || "Authorization"}}':
+					'={{$credentials.apiToken}}',
+			},
+		},
+	};
 }
